@@ -6,9 +6,26 @@ const path = require("path");
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
-app.use(express.static("public")); // painel admin
+const path = require("path");
+
+// Servir a pasta public corretamente no Render
+app.use("/public", express.static(path.join(__dirname, "public")));
+
+// Rota direta para abrir o painel
+app.get("/admin", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
+});
+
+const path = require("path");
+
+// Servir arquivos estáticos
+app.use("/public", express.static(path.join(__dirname, "public")));
+
+// Rota direta /admin
+app.get("/admin", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
+});
+ // painel admin
 
 const USERS_FILE = path.join(__dirname, "users.json");
 
