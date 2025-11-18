@@ -1,60 +1,53 @@
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
+const fs = require("fs");
+const path = require("path");
 
 const app = express();
 
-// Permitir requisições do seu CRM
 app.use(cors());
 app.use(express.json());
+app.use(express.static("public")); // painel admin
 
-// 🔐 Usuários "externos" definidos no servidor
-// Você pode mudar, adicionar, remover aqui sempre que quiser
-const users = [
-  {
-    username: "admin",
-    passwordHash: bcrypt.hashSync("1234", 10), // senha: 1234
-    role: "admin",
-  },
-  {
-    username: "atendente",
-    passwordHash: bcrypt.hashSync("senha123", 10), // senha: senha123
-    role: "user",
-  },
-];
+const USERS_FILE = path.join(__dirname, "users.json");
 
-// Função para achar usuário
-function findUser(username) {
-  return users.find((u) => u.username === username);
+// garante arquivo de usuários
+if (!fs.existsSync(USERS_FILE)) {
+  fs.writeFileSync(USERS_FILE, JSON.stringify([], null, 2));
 }
 
-// Rota simples para testar
+// lê usuários
+function loadUsers() {
+  return JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
+}
+
+// salva usuários
+function saveUsers(users) {
+  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+}
+
+// rota inicial
 app.get("/", (req, res) => {
-  res.send("API CRM rodando ✅");
+  res.send("API CRM ONLINE");
 });
 
-// Rota de login
+//
+// LOGIN
+//
 app.post("/api/auth/login", async (req, res) => {
-  const { username, password } = req.body || {};
+  const { username, password } = req.body;
 
-  if (!username || !password) {
-    return res
-      .status(400)
-      .json({ success: false, msg: "Usuário e senha são obrigatórios." });
-  }
+  const users = loadUsers();
+  const user = users.find((u) => u.username === username);
 
-  const user = findUser(username);
   if (!user) {
-    return res
-      .status(401)
-      .json({ success: false, msg: "Usuário não encontrado." });
+    return res.json({ success: false, msg: "Usuário não encontrado" });
   }
 
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) {
-    return res
-      .status(401)
-      .json({ success: false, msg: "Senha incorreta." });
+    return res.json({ success: false, msg: "Senha incorreta" });
   }
 
   return res.json({
@@ -64,8 +57,59 @@ app.post("/api/auth/login", async (req, res) => {
   });
 });
 
-// Porta usada pelo Render
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log("API CRM ouvindo na porta " + PORT);
+//
+// LISTAR USUÁRIOS
+//
+app.get("/api/auth/users", (req, res) => {
+  const users = loadUsers();
+  res.json(users);
 });
+
+//
+// CRIAR USUÁRIO
+//
+app.post("/api/auth/register", async (req, res) => {
+  const { username, password, role } = req.body;
+
+  if (!username || !password) {
+    return res.json({ success: false, msg: "Campos obrigatórios faltando" });
+  }
+
+  const users = loadUsers();
+
+  if (users.find((u) => u.username === username)) {
+    return res.json({ success: false, msg: "Usuário já existe" });
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  users.push({ username, passwordHash, role: role || "user" });
+  saveUsers(users);
+
+  return res.json({ success: true, msg: "Usuário criado com sucesso" });
+});
+
+//
+// DELETAR USUÁRIO
+//
+app.delete("/api/auth/users/:username", (req, res) => {
+  const username = req.params.username;
+
+  let users = loadUsers();
+
+  const exists = users.find((u) => u.username === username);
+  if (!exists) {
+    return res.json({ success: false, msg: "Usuário não existe" });
+  }
+
+  users = users.filter((u) => u.username !== username);
+  saveUsers(users);
+
+  return res.json({ success: true, msg: "Usuário removido" });
+});
+
+//
+// Roda no Render
+//
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log("API rodando na porta " + PORT));
