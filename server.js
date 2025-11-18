@@ -6,51 +6,42 @@ const path = require("path");
 
 const app = express();
 
-const path = require("path");
+app.use(cors());
+app.use(express.json());
 
-// Servir a pasta public corretamente no Render
+// 🚀 SERVIR PASTA PUBLIC CORRETAMENTE (Render-Friendly)
 app.use("/public", express.static(path.join(__dirname, "public")));
 
-// Rota direta para abrir o painel
+// 🚀 ROTA DIRETA PARA O PAINEL ADMIN
 app.get("/admin", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
 
-const path = require("path");
-
-// Servir arquivos estáticos
-app.use("/public", express.static(path.join(__dirname, "public")));
-
-// Rota direta /admin
-app.get("/admin", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin.html"));
-});
- // painel admin
-
+// 🚀 ARQUIVO DE USUÁRIOS PERSISTENTE
 const USERS_FILE = path.join(__dirname, "users.json");
 
-// garante arquivo de usuários
+// Cria users.json se não existir
 if (!fs.existsSync(USERS_FILE)) {
   fs.writeFileSync(USERS_FILE, JSON.stringify([], null, 2));
 }
 
-// lê usuários
+// Lê usuários
 function loadUsers() {
   return JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
 }
 
-// salva usuários
+// Salva usuários
 function saveUsers(users) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
 }
 
-// rota inicial
+// Rota raiz
 app.get("/", (req, res) => {
-  res.send("API CRM ONLINE");
+  res.send("API CRM ONLINE - FUNCIONANDO! 🔥");
 });
 
 //
-// LOGIN
+// 🔐 LOGIN
 //
 app.post("/api/auth/login", async (req, res) => {
   const { username, password } = req.body;
@@ -75,7 +66,7 @@ app.post("/api/auth/login", async (req, res) => {
 });
 
 //
-// LISTAR USUÁRIOS
+// 👥 LISTAR USUÁRIOS
 //
 app.get("/api/auth/users", (req, res) => {
   const users = loadUsers();
@@ -83,13 +74,13 @@ app.get("/api/auth/users", (req, res) => {
 });
 
 //
-// CRIAR USUÁRIO
+// ➕ CRIAR USUÁRIO
 //
 app.post("/api/auth/register", async (req, res) => {
   const { username, password, role } = req.body;
 
   if (!username || !password) {
-    return res.json({ success: false, msg: "Campos obrigatórios faltando" });
+    return res.json({ success: false, msg: "Usuário e senha são obrigatórios" });
   }
 
   const users = loadUsers();
@@ -100,33 +91,40 @@ app.post("/api/auth/register", async (req, res) => {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  users.push({ username, passwordHash, role: role || "user" });
+  users.push({
+    username,
+    passwordHash,
+    role: role || "user",
+  });
+
   saveUsers(users);
 
   return res.json({ success: true, msg: "Usuário criado com sucesso" });
 });
 
 //
-// DELETAR USUÁRIO
+// ❌ DELETAR USUÁRIO
 //
 app.delete("/api/auth/users/:username", (req, res) => {
-  const username = req.params.username;
+  const { username } = req.params;
 
   let users = loadUsers();
 
-  const exists = users.find((u) => u.username === username);
-  if (!exists) {
+  if (!users.find((u) => u.username === username)) {
     return res.json({ success: false, msg: "Usuário não existe" });
   }
 
   users = users.filter((u) => u.username !== username);
+
   saveUsers(users);
 
-  return res.json({ success: true, msg: "Usuário removido" });
+  return res.json({ success: true, msg: "Usuário removido com sucesso" });
 });
 
 //
-// Roda no Render
+// 🚀 PORTA DO RENDER
 //
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log("API rodando na porta " + PORT));
+app.listen(PORT, () => {
+  console.log("🚀 API rodando na porta " + PORT);
+});
