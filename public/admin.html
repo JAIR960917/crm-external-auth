@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Painel de Usuários - CRM</title>
+<style>
+body { font-family: Arial; background: #f4f4f4; padding: 20px; }
+.card { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+button { padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; }
+.add { background: #007bff; color: white; }
+.del { background: #d9534f; color: white; }
+input, select { padding: 8px; width: 200px; margin-right: 10px; }
+</style>
+</head>
+<body>
+
+<h2>Gerenciamento de Usuários</h2>
+
+<div class="card">
+  <h3>Criar Novo Usuário</h3>
+  <input id="username" placeholder="Usuário"><br><br>
+  <input id="password" type="password" placeholder="Senha"><br><br>
+  <select id="role">
+    <option value="user">Usuário</option>
+    <option value="admin">Admin</option>
+  </select>
+  <button class="add" onclick="createUser()">Criar</button>
+</div>
+
+<div class="card">
+  <h3>Usuários Atuais</h3>
+  <div id="user-list">Carregando...</div>
+</div>
+
+<script>
+const API = "/api/auth";
+
+async function loadUsers() {
+  const res = await fetch(API + "/users");
+  const users = await res.json();
+
+  const box = document.getElementById("user-list");
+  box.innerHTML = "";
+
+  users.forEach(u => {
+    box.innerHTML += `
+      <div style="margin-bottom:8px;">
+        <b>${u.username}</b> (${u.role})
+        <button class="del" onclick="deleteUser('${u.username}')">Excluir</button>
+      </div>
+    `;
+  });
+}
+
+async function createUser() {
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const role = document.getElementById("role").value;
+
+  const res = await fetch(API + "/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password, role })
+  });
+
+  const data = await res.json();
+  alert(data.msg);
+  loadUsers();
+}
+
+async function deleteUser(username) {
+  if (!confirm("Excluir usuário " + username + "?")) return;
+
+  const res = await fetch(API + "/users/" + username, {
+    method: "DELETE"
+  });
+
+  const data = await res.json();
+  alert(data.msg);
+  loadUsers();
+}
+
+loadUsers();
+</script>
+
+</body>
+</html>
